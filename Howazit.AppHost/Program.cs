@@ -1,13 +1,11 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-// Discover repo root (walk up until we find a marker file)
+// Resolve API project path (repo root -> Howazit.Responses.Api)
 var repoRoot = FindRepoRoot() ?? Directory.GetCurrentDirectory();
-
-// Build absolute path to the API .csproj
 var apiProjectPath = Path.Combine(repoRoot, "Howazit.Responses.Api", "Howazit.Responses.Api.csproj");
-if (!File.Exists(apiProjectPath)) {
+if (!File.Exists(apiProjectPath))
     throw new FileNotFoundException($"API project file not found at: {apiProjectPath}");
-}
+
 
 // Infra (Redis)
 var redis = builder.AddRedis("redis", 6379);
@@ -15,8 +13,8 @@ var redis = builder.AddRedis("redis", 6379);
 // API project (absolute path) — no WithHttpEndpoint here to avoid duplicate 'http'
 builder.AddProject("howazit-api", apiProjectPath)
     .WithEnvironment("DOTNET_ENVIRONMENT", "Development")
-    .WithEnvironment("ASPNETCORE_URLS", "http://0.0.0.0:8080")
-    .WithReference(redis);
+    .WithReference(redis)
+    .WithHttpEndpoint(name: "public-http", port: 8080);
 
 builder.Build().Run();
 

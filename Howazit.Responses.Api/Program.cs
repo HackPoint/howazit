@@ -41,8 +41,8 @@ builder.Services.AddOpenTelemetry()
     .WithTracing(t => t.AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation());
 
-// App services
-builder.Services.AddInfrastructure();
+// App services (Infra: sanitizer, queue, worker, repos, db, redis)
+builder.Services.AddInfrastructure(builder.Configuration);
 
 // FluentValidation: discover validators from Application assembly
 builder.Services.AddValidatorsFromAssemblyContaining<IngestRequestValidator>();
