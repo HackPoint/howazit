@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <!-- This SDK turns the project into a proper Aspire AppHost -->
+    <Sdk Name="Aspire.AppHost.Sdk" Version="9.4.2" />
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- AppHost + Redis integrations -->
+        <PackageReference Include="Aspire.Hosting.AppHost" Version="9.4.2" />
+        <PackageReference Include="Aspire.Hosting.Redis" Version="9.4.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Howazit.Responses.Api\Howazit.Responses.Api.csproj" />
+    </ItemGroup>
+</Project>

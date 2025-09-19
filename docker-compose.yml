@@ -1,0 +1,21 @@
+version: "3.9"
+services:
+  redis:
+    image: redis:7.2-alpine
+    container_name: howazit-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+  api:
+    build:
+      context: ./src/Howazit.Responses.Api
+      dockerfile: Dockerfile
+    container_name: howazit-api
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      DOTNET_ENVIRONMENT: Development
+      REDIS__CONNECTIONSTRING: redis:6379
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis

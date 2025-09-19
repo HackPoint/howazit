@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <IsPackable>false</IsPackable>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+        <PackageReference Include="xunit" Version="2.7.0" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.5.7" PrivateAssets="all" />
+        <PackageReference Include="FluentAssertions" Version="6.12.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Correct relative paths (no 'src/') -->
+        <ProjectReference Include="..\Howazit.Responses.Api\Howazit.Responses.Api.csproj" />
+        <ProjectReference Include="..\Howazit.Responses.Application\Howazit.Responses.Application.csproj" />
+    </ItemGroup>
+</Project>

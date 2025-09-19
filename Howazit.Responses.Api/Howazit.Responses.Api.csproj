@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+    <PropertyGroup>
+        <AssemblyName>Howazit.Responses.Api</AssemblyName>
+        <UserSecretsId>howazit-responses-api-dev</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+        <PackageReference Include="Serilog.AspNetCore" Version="8.0.2" />
+
+        <!-- OpenTelemetry core + instrumentations (all stable) -->
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.8.1" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.8.1" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.8.1" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.8.1" />
+
+        <!-- FluentValidation DI -->
+        <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.9.0" />
+
+        <!--Open API-->
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Howazit.Responses.Application\Howazit.Responses.Application.csproj" />
+        <ProjectReference Include="..\Howazit.Responses.Infrastructure\Howazit.Responses.Infrastructure.csproj" />
+        <ProjectReference Include="..\Howazit.Responses.Domain\Howazit.Responses.Domain.csproj" />
+        
+    </ItemGroup>
+</Project>
