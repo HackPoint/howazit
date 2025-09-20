@@ -1,6 +1,7 @@
 using System.Threading.RateLimiting;
 using FluentValidation;
 using Howazit.Responses.Api.Features;
+using Howazit.Responses.Api.Features.Metrics;
 using Howazit.Responses.Application.Validations;
 using Microsoft.AspNetCore.RateLimiting;
 using OpenTelemetry.Metrics;
@@ -64,6 +65,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }));
 
 // Register: All responses endpoints
 app.MapResponseEndpoints();
+app.MapMetricsEndpoints();
 
 // Root redirect
 app.MapGet("/", () => Results.Redirect("/swagger"));
