@@ -5,6 +5,7 @@ using Howazit.Responses.Infrastructure.Persistence;
 using Howazit.Responses.Infrastructure.Queue;
 using Howazit.Responses.Infrastructure.Realtime;
 using Howazit.Responses.Infrastructure.Repositories;
+using Howazit.Responses.Infrastructure.Resilience;
 using Howazit.Responses.Infrastructure.Sanitization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -31,7 +32,10 @@ public static class DependencyInjection {
         var sqliteConn = configuration.GetConnectionString("Sqlite")
                          ?? configuration["SQLITE__CONNECTIONSTRING"]
                          ?? "Data Source=howazit.db";
-        services.AddDbContext<ResponsesDbContext>(o => o.UseSqlite(sqliteConn));
+        services.AddDbContext<ResponsesDbContext>(o => {
+            o.UseSqlite(sqliteConn);
+            o.EnableDetailedErrors();
+        });
 
         // Ensure DB created at startup (creates a scope internally)
         services.AddHostedService<DbInitializer>();
@@ -39,13 +43,21 @@ public static class DependencyInjection {
         // Repo (scoped)
         services.AddScoped<IResponseRepository, EfResponseRepository>();
 
+        // Resilience policies (Polly v8)
+        services.AddSingleton<IResiliencePolicies, ResiliencePolicies>();
+
+        // Sanitizer
+        services.AddSingleton<ISanitizer, HtmlSanitizer>();
+
         // Redis (singleton multiplexer; don’t crash app if not up yet)
         var redisConn = configuration["REDIS__CONNECTIONSTRING"] ?? "localhost:6379";
         var redisOptions = ConfigurationOptions.Parse(redisConn);
         redisOptions.AbortOnConnectFail = false;
         services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisOptions));
+        services.AddSingleton<IRedisClient, StackExchangeRedisClient>();
         services.AddSingleton<IRealtimeAggregateStore, RedisAggregateStore>();
-
+        services.AddSingleton<IResiliencePolicies, ResiliencePolicies>();
+        
         // Background worker (singleton) — creates scopes per message
         services.AddHostedService<ResponseWorker>();
 

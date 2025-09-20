@@ -1,34 +1,62 @@
 using Howazit.Responses.Application.Abstractions;
+using Howazit.Responses.Infrastructure.Resilience;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Polly;
 using StackExchange.Redis;
 
 namespace Howazit.Responses.Infrastructure.Realtime;
 
-public class RedisAggregateStore(IConnectionMultiplexer redis) : IRealtimeAggregateStore {
+public class RedisAggregateStore : IRealtimeAggregateStore {
+    private readonly IConnectionMultiplexer _redis;
+    private readonly ILogger<RedisAggregateStore> _logger;
+    private readonly ResiliencePipeline _pipeline;
+
+    // Convenience: default policies + null logger
+    public RedisAggregateStore(IConnectionMultiplexer redis)
+        : this(redis, ResiliencePolicies.CreateDefault(), NullLogger<RedisAggregateStore>.Instance) { }
+
+    // Convenience: default policies with custom logger
+    public RedisAggregateStore(IConnectionMultiplexer redis, ILogger<RedisAggregateStore> logger)
+        : this(redis, ResiliencePolicies.CreateDefault(), logger) { }
+
+    // Primary ctor uses the interface
+    public RedisAggregateStore(
+        IConnectionMultiplexer redis,
+        IResiliencePolicies policies,
+        ILogger<RedisAggregateStore> logger) {
+        _redis = redis ?? throw new ArgumentNullException(nameof(redis));
+        _logger = logger ?? NullLogger<RedisAggregateStore>.Instance;
+        _pipeline = (policies ?? ResiliencePolicies.CreateDefault()).Redis;
+    }
+
     private static string Key(string clientId) => $"client:{clientId}:nps";
 
     public async Task UpdateNpsAsync(string clientId, int npsScore, CancellationToken ct = default) {
-        var db = redis.GetDatabase();
+        var db = _redis.GetDatabase();
         var key = Key(clientId);
 
-        string bucket = npsScore switch {
+        var bucket = npsScore switch {
             >= 9 and <= 10 => "promoters",
             >= 7 and <= 8 => "passives",
             _ => "detractors"
         };
 
-        // atomic increments
-        var tasks = new Task[] {
-            db.HashIncrementAsync(key, bucket, 1),
-            db.HashIncrementAsync(key, "total", 1)
-        };
-        await Task.WhenAll(tasks);
+        await _pipeline.ExecuteAsync(async _ => {
+            var t1 = db.HashIncrementAsync(key, bucket, 1);
+            var t2 = db.HashIncrementAsync(key, "total", 1);
+            await Task.WhenAll(t1, t2).ConfigureAwait(false);
+        }, ct).ConfigureAwait(false);
     }
 
     public async Task<NpsSnapshot> GetNpsAsync(string clientId, CancellationToken ct = default) {
-        var db = redis.GetDatabase();
+        var db = _redis.GetDatabase();
         var key = Key(clientId);
 
-        var vals = await db.HashGetAsync(key, ["promoters", "passives", "detractors", "total"]);
+        var vals = await _pipeline.ExecuteAsync(async _ =>
+            await db.HashGetAsync(key, new RedisValue[] { "promoters", "passives", "detractors", "total" })
+                .ConfigureAwait(false), ct).ConfigureAwait(false);
+
         var prom = (int)(vals[0].IsNull ? 0 : (long)vals[0]);
         var pass = (int)(vals[1].IsNull ? 0 : (long)vals[1]);
         var detr = (int)(vals[2].IsNull ? 0 : (long)vals[2]);
