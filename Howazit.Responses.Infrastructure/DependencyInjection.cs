@@ -15,10 +15,11 @@ using StackExchange.Redis;
 namespace Howazit.Responses.Infrastructure;
 
 public static class DependencyInjection {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration) {
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    {
         services.AddSingleton<ISanitizer, SimpleSanitizer>();
 
-        // SQS-like channel
+        // SQS-like channel (unchanged)
         var channel = Channel.CreateBounded<IngestRequest>(new BoundedChannelOptions(10_000) {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
@@ -28,37 +29,42 @@ public static class DependencyInjection {
         services.AddSingleton(queue);
         services.AddSingleton<IBackgroundQueueService<IngestRequest>>(queue);
 
-        // SQLite (scoped DbContext)
-        var sqliteConn = configuration.GetConnectionString("Sqlite")
-                         ?? configuration["SQLITE__CONNECTIONSTRING"]
-                         ?? "Data Source=howazit.db";
-        services.AddDbContext<ResponsesDbContext>(o => {
+        // ---------- SQLite ----------
+        // Prefer ConnectionStrings:Sqlite, then env key "SQLITE:CONNECTIONSTRING"
+        var sqliteConn =
+            configuration.GetConnectionString("Sqlite")
+            ?? configuration["SQLITE:CONNECTIONSTRING"]    // <- env var SQLITE__CONNECTIONSTRING maps to this key
+            ?? "Data Source=./data/howazit.db";                 // good default for container
+
+        services.AddDbContext<ResponsesDbContext>(o =>
+        {
             o.UseSqlite(sqliteConn);
             o.EnableDetailedErrors();
         });
 
-        // Ensure DB created at startup (creates a scope internally)
         services.AddHostedService<DbInitializer>();
-
-        // Repo (scoped)
         services.AddScoped<IResponseRepository, EfResponseRepository>();
 
-        // Resilience policies (Polly v8)
+        // Resilience (unchanged)
         services.AddSingleton<IResiliencePolicies, ResiliencePolicies>();
 
-        // Sanitizer
+        // Sanitizer (use whichever you settled on)
         services.AddSingleton<ISanitizer, HtmlSanitizer>();
 
-        // Redis (singleton multiplexer; don’t crash app if not up yet)
-        var redisConn = configuration["REDIS__CONNECTIONSTRING"] ?? "localhost:6379";
+        // ---------- Redis ----------
+        // Read env key "REDIS:CONNECTIONSTRING" (REDIS__CONNECTIONSTRING in Docker)
+        var redisConn =
+            configuration["REDIS:CONNECTIONSTRING"]
+            ?? "localhost:6379,abortConnect=false"; // local dev fallback only
+
         var redisOptions = ConfigurationOptions.Parse(redisConn);
         redisOptions.AbortOnConnectFail = false;
+
         services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisOptions));
         services.AddSingleton<IRedisClient, StackExchangeRedisClient>();
         services.AddSingleton<IRealtimeAggregateStore, RedisAggregateStore>();
-        services.AddSingleton<IResiliencePolicies, ResiliencePolicies>();
-        
-        // Background worker (singleton) — creates scopes per message
+
+        // Worker
         services.AddHostedService<ResponseWorker>();
 
         return services;

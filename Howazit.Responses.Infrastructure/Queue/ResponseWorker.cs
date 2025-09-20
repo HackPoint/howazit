@@ -46,18 +46,23 @@ public sealed class ResponseWorker : BackgroundService {
                     CreatedAtUtc = DateTimeOffset.UtcNow
                 };
 
-                var added = await repo.TryAddAsync(entity, stoppingToken);
+                var added = await repo.TryAddAsync(entity, stoppingToken).ConfigureAwait(false);
                 if (!added) {
                     Logs.IdempotentSkip(_logger, dto.ClientId, dto.ResponseId);
                     continue;
                 }
 
-                await agg.UpdateNpsAsync(dto.ClientId, entity.NpsScore, stoppingToken);
-                Logs.StoredAndAggregated(_logger, dto.ClientId, dto.ResponseId, dto.Responses.NpsScore ?? -1);
+                await agg.UpdateNpsAsync(dto.ClientId, entity.NpsScore, stoppingToken).ConfigureAwait(false);;
+                Logs.StoredAndAggregated(_logger, dto.ClientId, dto.ResponseId, entity.NpsScore);
             }
-            catch (Exception ex) {
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
                 Logs.ProcessingError(_logger, ex);
-                // swallow or dead-letter depending on your strategy
+                // swallow or dead-letter here based on your strategy
             }
         }
 

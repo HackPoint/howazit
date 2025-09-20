@@ -1,25 +1,3 @@
-# Howazit Responses — Local Acceptance Guide
-
-This document verifies the core happy paths end-to-end on your machine.
-
----
-
-## 0) Prerequisites
-
-- Docker + Docker Compose installed and running
-- .NET 9 SDK (for running tests outside Docker)
-- Optional: `jq` for pretty JSON output
-
-> **Redis auth note:** If your Redis in Docker requires a password, ensure the API uses the same password in its connection string (e.g., `localhost:6379,password=your-secret`). See Troubleshooting.
-
----
-
-## 1) One-file automated smoke test
-
-Save the script below as `scripts/acceptance.sh` (or run it inline).  
-It will: build & start containers, wait for health, post invalid & valid payloads, then verify real-time NPS metrics.
-
-```bash
 #!/usr/bin/env bash
 set -euo pipefail
 

@@ -2,6 +2,9 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{FEA1CB22-A62F-4D09-8BDF-EDDD86F03118}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Howazit.Responses.Domain", "Howazit.Responses.Domain\Howazit.Responses.Domain.csproj", "{5EBFED90-9532-4D65-B5DF-A605D3DF446F}"
 EndProject
@@ -18,6 +21,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Howazit.Responses.Tests", "Howazit.Responses.Tests\Howazit.Responses.Tests.csproj", "{B6CBAADD-5C44-4059-82A9-2C8E038213B9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Howazit.AcceptanceTests", "Howazit.AcceptanceTests\Howazit.AcceptanceTests.csproj", "{DB651E2B-5368-4FDF-97FE-540FC311B5DB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "documents", "documents", "{0BE43C86-237C-4DD6-89C0-6085EB1D9296}"
+	ProjectSection(SolutionItems) = preProject
+		ACCEPTANCE.md = ACCEPTANCE.md
+		AIDISCLOSURE.md = AIDISCLOSURE.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

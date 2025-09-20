@@ -12,22 +12,25 @@ namespace Howazit.Responses.Tests;
 
 public class CustomWebAppFactory : WebApplicationFactory<Program> {
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"howazit_tests_{Guid.NewGuid():N}.db");
-
+    private string DbConn => $"Data Source={Path.Combine(_dbPath, "responses.db")}";
+    
     protected override void ConfigureWebHost(IWebHostBuilder builder) {
+        Directory.CreateDirectory(_dbPath); // ensure it exists
+        
         builder.UseEnvironment(Environments.Development);
 
         // Point the app to a test-specific SQLite file via configuration
         builder.ConfigureAppConfiguration((ctx, cfg) => {
             cfg.AddInMemoryCollection(new Dictionary<string, string?> {
-                ["SQLITE__CONNECTIONSTRING"] = $"Data Source={_dbPath}"
+                // Primary key used by configuration.GetConnectionString("Sqlite")
+                ["ConnectionStrings:Sqlite"] = DbConn,
+                // Fallback key your DI also supports
+                ["SQLITE__CONNECTIONSTRING"] = DbConn
             });
         });
 
         // Swap the realtime aggregate store with an in-memory test double
         builder.ConfigureServices(services => {
-            services.RemoveAll<IRealtimeAggregateStore>();
-            services.AddSingleton<IRealtimeAggregateStore, InMemoryAggregateStore>();
-
             services.AddSingleton<IRealtimeAggregateStore, InMemoryAggregateStore>();
 
             // Disable the hosted worker in tests
@@ -49,7 +52,6 @@ public class CustomWebAppFactory : WebApplicationFactory<Program> {
             // Replace ALL queue-service registrations with the synchronous test queue
             services.RemoveAll<IBackgroundQueueService<IngestRequest>>();
             services.RemoveAll(typeof(IBackgroundQueueService<>));
-
             services.AddSingleton<IBackgroundQueueService<IngestRequest>, SynchronousBackgroundQueueService>();
         });
     }

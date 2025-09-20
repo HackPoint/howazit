@@ -7,12 +7,13 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <IsAspireHost>true</IsAspireHost>
     </PropertyGroup>
 
     <ItemGroup>
         <!-- AppHost + Redis integrations -->
         <PackageReference Include="Aspire.Hosting.AppHost" Version="9.4.2" />
-        <PackageReference Include="Aspire.Hosting.Redis" Version="9.4.2" />
+        <PackageReference Include="Aspire.Hosting.Redis" Version="9.4.2" />        
     </ItemGroup>
 
     <ItemGroup>

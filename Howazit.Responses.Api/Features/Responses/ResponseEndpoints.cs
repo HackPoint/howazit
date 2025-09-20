@@ -1,7 +1,6 @@
 using Howazit.Responses.Api.Responses;
 
-
-namespace Howazit.Responses.Api.Features;
+namespace Howazit.Responses.Api.Features.Responses;
 
 public static class ResponseEndpoints {
     public static IEndpointRouteBuilder MapResponseEndpoints(this IEndpointRouteBuilder app) {

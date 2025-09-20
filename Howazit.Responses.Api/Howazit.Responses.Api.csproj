@@ -8,11 +8,23 @@
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
         <PackageReference Include="Serilog.AspNetCore" Version="8.0.2" />
 
-        <!-- OpenTelemetry core + instrumentations (all stable) -->
-        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.8.1" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.8.1" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.8.1" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.8.1" />
+        <!-- OpenTelemetry host glue -->
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.10.0" />
+
+        <!-- Instrumentations (stable where available) -->
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.10.0" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.10.0" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.10.0" />
+
+        <!-- Only available as pre-release at the moment -->
+        <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.11.0-beta.1" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Process" Version="1.11.0-beta.1" />
+
+        <!-- Redis is still pre-release -->
+        <PackageReference Include="OpenTelemetry.Instrumentation.StackExchangeRedis" Version="1.9.0-beta.1" />
+
+        <!-- Exporter -->
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.10.0" />
 
         <!-- FluentValidation DI -->
         <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.9.0" />

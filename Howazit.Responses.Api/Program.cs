@@ -1,13 +1,17 @@
+using System.Reflection;
 using System.Threading.RateLimiting;
 using FluentValidation;
-using Howazit.Responses.Api.Features;
 using Howazit.Responses.Api.Features.Metrics;
+using Howazit.Responses.Api.Features.Responses;
+using Howazit.Responses.Api.Telemetry;
 using Howazit.Responses.Application.Validations;
 using Microsoft.AspNetCore.RateLimiting;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using OpenTelemetry.Resources;
 using Serilog;
 using Howazit.Responses.Infrastructure;
+using OpenTelemetry.Logs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,9 +42,50 @@ builder.Services.AddRateLimiter(_ => _
 builder.Services.AddOpenTelemetry()
     .WithMetrics(m => m.AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
-        .AddRuntimeInstrumentation()) 
+        .AddRuntimeInstrumentation())
     .WithTracing(t => t.AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation());
+
+var serviceName = "howazit-responses-api";
+var serviceVersion = Assembly.GetExecutingAssembly()
+    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "1.0.0";
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(rb => rb
+        .AddService(serviceName: serviceName, serviceVersion: serviceVersion)
+        .AddTelemetrySdk()
+        .AddEnvironmentVariableDetector()
+    )
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation(o => {
+            o.RecordException = true;
+            o.EnrichWithHttpRequest = TelemetryEnricher.EnrichWithHttpRequest;
+            o.EnrichWithHttpResponse = TelemetryEnricher.EnrichWithHttpResponse;
+            o.EnrichWithException = TelemetryEnricher.EnrichWithException;
+        })
+        .AddHttpClientInstrumentation()
+        .AddEntityFrameworkCoreInstrumentation(o => {
+            o.SetDbStatementForText = true;
+            o.SetDbStatementForStoredProcedure = true;
+        })
+        .AddRedisInstrumentation()
+        .AddOtlpExporter()
+    )
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddProcessInstrumentation()
+        .AddOtlpExporter()
+    );
+
+// Logs to OTLP
+builder.Logging.AddOpenTelemetry(o => {
+    o.IncludeFormattedMessage = true;
+    o.IncludeScopes = true;
+    o.ParseStateValues = true;
+    o.AddOtlpExporter();
+});
 
 // App services (Infra: sanitizer, queue, worker, repos, db, redis)
 builder.Services.AddInfrastructure(builder.Configuration);

@@ -1,20 +1,28 @@
 services:
   redis:
-    image: redis:7.2-alpine
-    ports: ["6379:6379"]
-    command: ["redis-server","--save","","--appendonly","no"]
+    image: redis:7
+    command: ["redis-server","--appendonly","yes","--requirepass","redispass"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redispass", "PING"]
+      interval: 2s
+      timeout: 1s
+      retries: 10
 
   api:
     build:
-      context: .                                # <- repo root
+      context: .
       dockerfile: Howazit.Responses.Api/Dockerfile
     environment:
       ASPNETCORE_URLS: http://0.0.0.0:8080
       DOTNET_ENVIRONMENT: Development
-      REDIS__CONNECTIONSTRING: redis:6379
+      REDIS__CONNECTIONSTRING: redis:6379,password=redispass,abortConnect=false
       SQLITE__CONNECTIONSTRING: Data Source=/app/data/howazit.db
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
     ports: ["8080:8080"]
-    depends_on: ["redis"]
+    depends_on:
+      redis:
+        condition: service_healthy
     volumes:
       - howazit_api_data:/app/data
 
