@@ -17,6 +17,9 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+
+        <PackageReference Include="System.Xml.XDocument" Version="4.3.0" />
+        <PackageReference Include="System.Xml.ReaderWriter" Version="4.3.0" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\Howazit.Responses.Api\Howazit.Responses.Api.csproj" />

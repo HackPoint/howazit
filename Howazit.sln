@@ -26,6 +26,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "documents", "documents", "{
 	ProjectSection(SolutionItems) = preProject
 		ACCEPTANCE.md = ACCEPTANCE.md
 		AIDISCLOSURE.md = AIDISCLOSURE.md
+		RATEACCEPTANCE.md = RATEACCEPTANCE.md
 	EndProjectSection
 EndProject
 Global

@@ -22,6 +22,13 @@ public class CustomWebAppFactory : WebApplicationFactory<Program> {
         // Point the app to a test-specific SQLite file via configuration
         builder.ConfigureAppConfiguration((ctx, cfg) => {
             cfg.AddInMemoryCollection(new Dictionary<string, string?> {
+                // strict and deterministic for tests
+                ["RATELIMIT__PERMIT_LIMIT"] = "1",
+                ["RATELIMIT__WINDOW_MS"]    = "10000",
+                ["RATELIMIT__SEGMENTS"]     = "1",
+                ["RATELIMIT__QUEUE_LIMIT"]  = "0",
+                ["RATELIMIT__ENABLED"] = "false",
+                
                 // Primary key used by configuration.GetConnectionString("Sqlite")
                 ["ConnectionStrings:Sqlite"] = DbConn,
                 // Fallback key your DI also supports
