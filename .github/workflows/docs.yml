@@ -1,18 +1,19 @@
-# .github/workflows/ci.yml
-name: CI
+name: Build & Publish API Docs
 
 on:
   push:
-  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build-test-docs:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
 
-      # Install BOTH SDKs (brings matching shared frameworks too)
       - name: Setup .NET 9 & 8
         uses: actions/setup-dotnet@v4
         with:
@@ -27,15 +28,39 @@ jobs:
         run: dotnet build -c Release --no-restore
 
       - name: Test (with coverage)
-        run: dotnet test -c Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+        run: dotnet test -c Release --no-build /p:CollectCoverage=true
 
-      # Generate OpenAPI with Swashbuckle CLI (net8 tool)
       - name: Install Swashbuckle CLI
         run: dotnet tool install --global Swashbuckle.AspNetCore.Cli --version 6.6.2
 
       - name: Generate OpenAPI JSON
         run: |
           export PATH="$PATH:$HOME/.dotnet/tools"
+          mkdir -p docs
           dotnet swagger tofile \
             --output docs/openapi.json \
             ./Howazit.Responses.Api/bin/Release/net9.0/Howazit.Responses.Api.dll v1
+
+      - name: Build ReDoc HTML
+        run: |
+          npm --yes -g i redoc-cli
+          npx redoc-cli bundle docs/openapi.json -o docs/index.html
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    needs: build-test-docs
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
