@@ -1,0 +1,63 @@
+name: Publish API Docs (Redoc on GitHub Pages)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Restore & Build API
+        run: |
+          dotnet restore
+          dotnet build -c Release
+
+      # Install Swashbuckle CLI locally (version should match your package: 6.6.2)
+      - name: Install Swagger CLI (local tool)
+        run: |
+          dotnet new tool-manifest
+          dotnet tool install Swashbuckle.AspNetCore.Cli --version 6.6.2
+
+      # Generate OpenAPI JSON into docs/openapi.json using the built assembly
+      - name: Generate OpenAPI JSON
+        run: |
+          DLL=./Howazit.Responses.Api/bin/Release/net9.0/Howazit.Responses.Api.dll
+          mkdir -p docs
+          # 'v1' must match your Swagger doc name
+          dotnet tool run swagger tofile --output docs/openapi.json "$DLL" v1
+
+      # Upload docs/ as the Pages artifact (contains index.html + openapi.json)
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build-docs
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

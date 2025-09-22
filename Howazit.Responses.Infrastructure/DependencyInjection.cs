@@ -130,11 +130,18 @@ internal static class ResilienceExtensions {
 
 internal static class RedisExtensions {
     public static IServiceCollection AddRedis(this IServiceCollection services, IConfiguration config) {
-        // Support both REDIS:CONNECTIONSTRING and REDIS__CONNECTIONSTRING
+        var inContainer = string.Equals(
+            Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
+            "true", StringComparison.OrdinalIgnoreCase);
+        
+        // If no explicit value is provided, use a sensible default per environment:
+        var defaultRedis = inContainer
+            ? "redis:6379,abortConnect=false"
+            : "localhost:6379,abortConnect=false";
+        
         var redisConn =
-            config["REDIS:CONNECTIONSTRING"]
-            ?? config["REDIS__CONNECTIONSTRING"]
-            ?? "localhost:6379,abortConnect=false";
+            config["REDIS:CONNECTIONSTRING"]  // supports REDIS__CONNECTIONSTRING env
+            ?? defaultRedis;
 
         var options = ConfigurationOptions.Parse(redisConn);
         options.AbortOnConnectFail = false;

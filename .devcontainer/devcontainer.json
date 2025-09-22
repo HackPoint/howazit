@@ -1,20 +1,25 @@
 {
-  "name": "Howazit Responses Dev",
-  "build": { "dockerfile": "Dockerfile", "context": "." },
-  "workspaceFolder": "/workspaces",
+  "name": "Howazit Responses",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:1-9.0",
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
   },
-  "postCreateCommand": "dotnet --info && dotnet restore",
+  "postCreateCommand": "dotnet tool restore && dotnet restore",
   "customizations": {
     "vscode": {
       "extensions": [
         "ms-dotnettools.csharp",
         "ms-azuretools.vscode-docker",
-        "ms-vscode.test-adapter-converter",
+        "tamasfe.even-better-toml",
         "editorconfig.editorconfig"
-      ]
+      ],
+      "settings": {
+        "dotnet.server.launchBrowser": false
+      }
     }
   },
-  "remoteUser": "root"
+  "forwardPorts": [8080, 18888],
+  "remoteEnv": {
+    "DOTNET_ENVIRONMENT": "Development"
+  }
 }
