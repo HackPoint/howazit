@@ -3,7 +3,7 @@ services:
     image: redis:7
     command: ["redis-server","--appendonly","yes","--requirepass","redispass"]
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "redispass", "PING"]
+      test: ["CMD-SHELL", "redis-cli -a redispass ping | grep PONG || exit 1"]
       interval: 2s
       timeout: 1s
       retries: 10
