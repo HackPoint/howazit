@@ -1,0 +1,75 @@
+name: Build, Test, and Publish API Docs
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9 and 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            9.0.x
+            8.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build (Release)
+        run: dotnet build -c Release --no-restore
+
+      - name: Test (with coverage)
+        run: dotnet test -c Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=lcov
+
+      # Use local tool manifest (see file #2 below)
+      - name: Restore dotnet tools
+        run: dotnet tool restore
+
+      - name: Export OpenAPI JSON
+        run: |
+          mkdir -p docs
+          # Export the swagger doc named 'v1' from the built API DLL
+          dotnet tool run swagger tofile \
+            --output docs/openapi.json \
+            ./Howazit.Responses.Api/bin/Release/net9.0/Howazit.Responses.Api.dll v1
+
+      - name: Add nojekyll
+        run: |
+          touch docs/.nojekyll
+          echo "Howazit Responses API Docs" > docs/README.txt
+
+      # Optional: ReDoc HTML (no repo files needed, uses npx)
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build ReDoc
+        run: |
+          npx --yes redoc-cli@0.13.23 bundle docs/openapi.json -o docs/index.html \
+            --title "Howazit Responses API"
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
