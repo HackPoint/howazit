@@ -19,6 +19,10 @@ services:
       SQLITE__CONNECTIONSTRING: Data Source=/app/data/howazit.db
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      ENCRYPT__PURPOSE: "howazit:v2:pii"
+      ENCRYPT__PREVIOUS_PURPOSES: "howazit:v1:pii"
+      ENCRYPT__USERAGENT: "true"
+      DATAPROTECTION__KEYRING_PATH: "/app/data/dp-keys"
     ports: ["8080:8080"]
     depends_on:
       redis:

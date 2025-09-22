@@ -1,10 +1,27 @@
+using Howazit.Responses.Application.Abstractions;
 using Howazit.Responses.Domain.Entities;
+using Howazit.Responses.Infrastructure.Protection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Howazit.Responses.Infrastructure.Persistence;
 
-public class ResponsesDbContext(DbContextOptions<ResponsesDbContext> options) : DbContext(options) {
+public class ResponsesDbContext : DbContext {
+    private readonly IFieldProtector _protector;
+    private readonly bool _encryptUserAgent;
+    
+    internal bool EncryptUserAgent => _encryptUserAgent;
+    
     public DbSet<SurveyResponse> SurveyResponses => Set<SurveyResponse>();
+
+    public ResponsesDbContext(
+        DbContextOptions<ResponsesDbContext> options,
+        IFieldProtector protector,
+        DataProtectionFieldProtector.Options encOptions)
+        : base(options) {
+        _protector = protector;
+        _encryptUserAgent = encOptions?.EncryptUserAgent ?? false;
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         var e = modelBuilder.Entity<SurveyResponse>();
@@ -26,5 +43,29 @@ public class ResponsesDbContext(DbContextOptions<ResponsesDbContext> options) : 
 
         // Idempotency: one logical response per (ClientId, ResponseId)
         e.HasIndex(x => new { x.ClientId, x.ResponseId }).IsUnique();
+
+        // Transparent encryption converters
+        var protect = new ValueConverter<string?, string?>(
+            v => _protector.Protect(v),
+            v => _protector.Unprotect(v));
+
+        modelBuilder.Entity<SurveyResponse>()
+            .Property(x => x.IpAddress)
+            .HasConversion(protect);
+
+
+        // always encrypt IP at rest
+        e.Property(p => p.IpAddress)
+            .HasConversion(
+                v => _protector.Protect(v),
+                v => _protector.Unprotect(v));
+
+        if (_encryptUserAgent) {
+            e.Property(x => x.UserAgent)
+                .HasConversion(
+                    v => _protector.Protect(v),
+                    v => _protector.Unprotect(v)
+                );
+        }
     }
 }

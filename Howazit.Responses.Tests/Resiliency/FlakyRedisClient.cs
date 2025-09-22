@@ -1,6 +1,9 @@
+using System.Diagnostics.CodeAnalysis;
 using FluentAssertions;
+using Howazit.Responses.Application.Abstractions;
 using Howazit.Responses.Domain.Entities;
 using Howazit.Responses.Infrastructure.Persistence;
+using Howazit.Responses.Infrastructure.Protection;
 using Howazit.Responses.Infrastructure.Realtime;
 using Howazit.Responses.Infrastructure.Repositories;
 using Howazit.Responses.Infrastructure.Resilience;
@@ -13,6 +16,15 @@ using Xunit;
 
 namespace Howazit.Responses.Tests.Resiliency;
 
+internal sealed class NoOpFieldProtector : IFieldProtector {
+    public string? Protect(string? plaintext) => plaintext;
+
+    public string? Unprotect(string? ciphertext) => null;
+    
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Implements interface")]
+    public string? TryUnprotect(string? ciphertext) => ciphertext;
+}
+
 public class RedisRetryPolicyTests {
     [Fact]
     public async Task TryAddAsyncRetriesOnTransientFailureThenSucceeds() {
@@ -20,11 +32,21 @@ public class RedisRetryPolicyTests {
         await conn.OpenAsync();
 
         var options = new DbContextOptionsBuilder<ResponsesDbContext>()
-            .UseSqlite(conn) // no extra package needed
+            .UseSqlite(conn) // single in-memory connection, stays open for context lifetime
             .Options;
 
-        await using var ctx = new FlakyResponsesDbContext(options); // fails first SaveChangesAsync()
-        await ctx.Database.EnsureCreatedAsync(); // create schema once per connection
+        var protector = new NoOpFieldProtector();
+        var encOptions = new DataProtectionFieldProtector.Options {
+            Purpose = "test",
+            PreviousPurposes = [],
+            EncryptUserAgent = false
+        };
+
+        // fail first SaveChangesAsync(), then succeed (exercises Polly retry)
+        await using var ctx = new FlakyResponsesDbContext(options, protector, encOptions, failures: 1);
+
+        // create schema on the same open connection
+        await ctx.Database.EnsureCreatedAsync();
 
         var repo = new EfResponseRepository(ctx, NullLogger<EfResponseRepository>.Instance);
 
@@ -37,7 +59,7 @@ public class RedisRetryPolicyTests {
             Timestamp = DateTimeOffset.UtcNow
         };
 
-        // Act: first SaveChangesAsync throws (simulated), then Polly retry should succeed
+        // Act: first SaveChanges throws, retry should succeed
         var added = await repo.TryAddAsync(entity);
 
         // Assert
@@ -109,11 +131,33 @@ public class RedisRetryPolicyTests {
 }
 
 internal sealed class FlakyResponsesDbContext : ResponsesDbContext {
-    private int _failuresLeft = 1;
-    public FlakyResponsesDbContext(DbContextOptions<ResponsesDbContext> options) : base(options) { }
+    private int _failuresLeft;
+
+    public FlakyResponsesDbContext(
+        DbContextOptions<ResponsesDbContext> options,
+        IFieldProtector protector,
+        DataProtectionFieldProtector.Options encOptions,
+        int failures = 1)
+        : base(options, protector, encOptions) {
+        _failuresLeft = failures;
+    }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) {
-        if (_failuresLeft-- > 0) throw new DbUpdateException("simulated");
+        MaybeFail();
         return base.SaveChangesAsync(cancellationToken);
+    }
+
+    public override Task<int> SaveChangesAsync(
+        bool acceptAllChangesOnSuccess,
+        CancellationToken cancellationToken = default) {
+        MaybeFail();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private void MaybeFail() {
+        // Fail the first `failures` times, then succeed.
+        if (Interlocked.Decrement(ref _failuresLeft) >= 0) {
+            throw new DbUpdateException("simulated transient failure");
+        }
     }
 }
