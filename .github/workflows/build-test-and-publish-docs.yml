@@ -56,8 +56,8 @@ jobs:
         with:
           node-version: 20
 
-      - name: Build ReDoc
-        run: npx --yes redoc-cli@0.13.23 bundle docs/openapi.json -o docs/index.html --title "Howazit Responses API"
+      - name: Build ReDoc (Redocly)
+          run: npx --yes @redocly/cli@latest build-docs docs/openapi.json -o docs/index.html --title "Howazit Responses API"
 
       - name: Add nojekyll
         run: echo > docs/.nojekyll
