@@ -9,6 +9,8 @@ This single document serves as the **README**, **API documentation**, **test cov
 **Howazit.Responses** is a minimal, production-ready .NET 9 service for ingesting survey responses and exposing **real-time NPS metrics**. It persists canonical data in **SQLite** and maintains live aggregates in **Redis**. The system is resilient by design (Polly retry & circuit-breaker), validated (FluentValidation) and safe (HTML sanitizer). It can be run locally or via Docker Compose.
 
 ---
+Github Pages: https://hackpoint.github.io/howazit/
+---
 
 ## Features
 
